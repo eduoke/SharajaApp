@@ -1,6 +1,6 @@
 import { HfInference } from "@huggingface/inference";
 
-const hf = new HfInference();
+const hf = new HfInference(process.env.HUGGINGFACE_API_KEY);
 
 export async function getJournalInsights(content: string) {
   try {
@@ -12,7 +12,7 @@ export async function getJournalInsights(content: string) {
 
     // Format response to match our existing structure
     const mood = response[0]?.label || "neutral";
-    
+
     // Get text summarization for insights
     const insightResponse = await hf.summarization({
       model: "facebook/bart-large-cnn",
@@ -47,7 +47,7 @@ export async function getJournalRecommendations(previousEntries: string[]) {
   try {
     // Combine previous entries for context
     const context = previousEntries.join(" ");
-    
+
     // Use text generation to create writing prompts
     const response = await hf.textGeneration({
       model: "gpt2",
