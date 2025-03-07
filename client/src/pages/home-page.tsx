@@ -6,6 +6,8 @@ import JournalList from "@/components/journal-list";
 import Recommendations from "@/components/recommendations";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Link } from "wouter";
+import { Book, Users } from "lucide-react";
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
@@ -24,6 +26,20 @@ export default function HomePage() {
             Logout
           </Button>
         </div>
+        <div className="flex gap-2 mb-4">
+          <Link href="/">
+            <Button variant="outline" className="w-full flex items-center gap-2">
+              <Book className="h-4 w-4" />
+              Journals
+            </Button>
+          </Link>
+          <Link href="/circles">
+            <Button variant="outline" className="w-full flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Circles
+            </Button>
+          </Link>
+        </div>
         <ScrollArea className="h-[calc(100vh-8rem)]">
           <JournalList
             journals={journals}
@@ -32,7 +48,7 @@ export default function HomePage() {
           />
         </ScrollArea>
       </aside>
-      
+
       <main className="flex-1 p-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
           <div className="lg:col-span-2">
