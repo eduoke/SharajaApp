@@ -11,6 +11,7 @@ import { Link } from "wouter";
 import { Book, Users } from "lucide-react";
 import { Journal } from "@shared/schema";
 import MoodTracker from "@/components/mood-tracker";
+import { Circle } from "@shared/schema"; // Assuming Circle type is defined here
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
@@ -21,8 +22,12 @@ export default function HomePage() {
     queryKey: ["/api/journals"],
   });
 
-  const selectedJournal = selectedJournalId 
-    ? journals.find(j => j.id === selectedJournalId)
+  const { data: circles = [] } = useQuery<Circle[]>({
+    queryKey: ["/api/circles"],
+  });
+
+  const selectedJournal = selectedJournalId
+    ? journals.find((j) => j.id === selectedJournalId)
     : null;
 
   return (
@@ -70,6 +75,7 @@ export default function HomePage() {
                   setSelectedJournalId(id);
                   setIsEditing(false);
                 }}
+                circles={circles}
               />
             ) : selectedJournal ? (
               <JournalViewer

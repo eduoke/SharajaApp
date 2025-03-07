@@ -248,8 +248,8 @@ export default function JournalEditor({ selectedJournalId, onJournalCreated, cir
                 <FormItem>
                   <FormLabel>Share with Circle</FormLabel>
                   <Select
-                    onValueChange={(value) => field.onChange(value ? parseInt(value) : null)}
-                    value={field.value?.toString() || ""}
+                    onValueChange={(value) => field.onChange(value === "none" ? null : parseInt(value))}
+                    value={field.value?.toString() || "none"}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -257,7 +257,7 @@ export default function JournalEditor({ selectedJournalId, onJournalCreated, cir
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Keep Private</SelectItem>
+                      <SelectItem value="none">Keep Private</SelectItem>
                       {circles?.map((circle) => (
                         <SelectItem key={circle.id} value={circle.id.toString()}>
                           {circle.name}
