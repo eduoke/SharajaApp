@@ -14,6 +14,8 @@ export const journals = pgTable("journals", {
   title: text("title").notNull(),
   content: text("content").notNull(),
   category: text("category").notNull(),
+  mood: text("mood").notNull().default("neutral"),
+  moodColor: text("mood_color").notNull().default("#808080"), // Default gray for neutral
   isPublic: boolean("is_public").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -39,7 +41,12 @@ export const insertJournalSchema = createInsertSchema(journals).pick({
   title: true,
   content: true,
   category: true,
+  mood: true,
+  moodColor: true,
   isPublic: true,
+}).extend({
+  mood: z.enum(['joyful', 'happy', 'neutral', 'sad', 'angry']).default('neutral'),
+  moodColor: z.string().default('#808080'),
 });
 
 export const insertCircleSchema = createInsertSchema(circles).pick({

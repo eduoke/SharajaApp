@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from "wouter";
 import { Book, Users } from "lucide-react";
 import { Journal } from "@shared/schema";
+import MoodTracker from "@/components/mood-tracker";
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
@@ -81,7 +82,8 @@ export default function HomePage() {
               </div>
             )}
           </div>
-          <div className="hidden lg:block">
+          <div className="hidden lg:flex lg:flex-col gap-4">
+            <MoodTracker journals={journals} />
             <Recommendations />
           </div>
         </div>

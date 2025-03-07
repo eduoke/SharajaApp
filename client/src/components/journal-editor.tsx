@@ -12,6 +12,7 @@ import { Loader2, Save } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Smile, Frown, Meh, Heart, Flame } from "lucide-react";
 
 const categories = [
   "Personal",
@@ -21,6 +22,14 @@ const categories = [
   "Goals",
   "Ideas",
   "Other"
+];
+
+const moods = [
+  { value: "joyful", label: "Joyful", icon: Heart, color: "#FFD700" },
+  { value: "happy", label: "Happy", icon: Smile, color: "#98FB98" },
+  { value: "neutral", label: "Neutral", icon: Meh, color: "#808080" },
+  { value: "sad", label: "Sad", icon: Frown, color: "#87CEEB" },
+  { value: "angry", label: "Angry", icon: Flame, color: "#FF6B6B" },
 ];
 
 interface JournalEditorProps {
@@ -40,6 +49,8 @@ export default function JournalEditor({ selectedJournalId, onJournalCreated }: J
       content: "",
       category: "Personal",
       isPublic: false,
+      mood: "neutral", //added default value
+      moodColor: "#808080" //added default value
     },
   });
 
@@ -57,6 +68,8 @@ export default function JournalEditor({ selectedJournalId, onJournalCreated }: J
         content: "",
         category: "Personal",
         isPublic: false,
+        mood: "neutral", //added default value
+        moodColor: "#808080" //added default value
       });
     }
   }, [selectedJournal, form]);
@@ -155,6 +168,38 @@ export default function JournalEditor({ selectedJournalId, onJournalCreated }: J
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="mood"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>How are you feeling?</FormLabel>
+                  <div className="flex gap-2">
+                    {moods.map(({ value, label, icon: Icon, color }) => (
+                      <Button
+                        key={value}
+                        type="button"
+                        variant={field.value === value ? "default" : "outline"}
+                        className="flex-1"
+                        style={{
+                          backgroundColor: field.value === value ? color : undefined,
+                          borderColor: color,
+                        }}
+                        onClick={() => {
+                          field.onChange(value);
+                          form.setValue("moodColor", color);
+                        }}
+                      >
+                        <Icon className="h-4 w-4 mr-2" />
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
