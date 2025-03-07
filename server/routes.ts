@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
-import { getJournalInsights, getJournalRecommendations } from "./openai";
+import { getJournalInsights, getJournalRecommendations } from "./huggingface";
 import { insertJournalSchema, insertCircleSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -57,7 +57,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const { content } = req.body;
     if (!content) return res.status(400).json({ message: "Content is required" });
-    
+
     try {
       const insights = await getJournalInsights(content);
       res.json(insights);
