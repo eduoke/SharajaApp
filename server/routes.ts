@@ -4,6 +4,9 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { getJournalInsights, getJournalRecommendations } from "./huggingface";
 import { insertJournalSchema, insertCircleSchema, insertCircleMemberSchema } from "@shared/schema";
+import { HfInference } from "@huggingface/inference";
+
+const hf = new HfInference(process.env.HUGGINGFACE_API_KEY);
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
@@ -180,6 +183,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const recommendations = await getJournalRecommendations(entries);
       res.json(recommendations);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/chat", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ message: "Content is required" });
+
+    try {
+      const response = await hf.textGeneration({
+        model: "gpt2",
+        inputs: content,
+        parameters: {
+          max_new_tokens: 100,
+          return_full_text: false,
+        }
+      });
+
+      res.json({ response: response.generated_text });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

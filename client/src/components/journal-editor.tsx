@@ -13,6 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Smile, Frown, Meh, Heart, Flame } from "lucide-react";
+import AIChat from "./ai-chat";
 
 const categories = [
   "Personal",
@@ -54,6 +55,11 @@ export default function JournalEditor({ selectedJournalId, onJournalCreated, cir
       moodColor: "#808080"
     },
   });
+
+  const handleAppendToJournal = (text: string) => {
+    const currentContent = form.getValues("content");
+    form.setValue("content", currentContent + "\n\nAI Assistant's Response:\n" + text);
+  };
 
   const { data: selectedJournal, isLoading: isLoadingJournal } = useQuery({
     queryKey: ["/api/journals", selectedJournalId],
@@ -128,195 +134,167 @@ export default function JournalEditor({ selectedJournalId, onJournalCreated, cir
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>{selectedJournalId ? "Edit Journal" : "New Journal Entry"}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Give your entry a title..." />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="mood"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>How are you feeling?</FormLabel>
-                  <div className="flex gap-2">
-                    {moods.map(({ value, label, icon: Icon, color }) => (
-                      <Button
-                        key={value}
-                        type="button"
-                        variant={field.value === value ? "default" : "outline"}
-                        className="flex-1"
-                        style={{
-                          backgroundColor: field.value === value ? color : undefined,
-                          borderColor: color,
-                        }}
-                        onClick={() => {
-                          field.onChange(value);
-                          form.setValue("moodColor", color);
-                        }}
-                      >
-                        <Icon className="h-4 w-4 mr-2" />
-                        {label}
-                      </Button>
-                    ))}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="content"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Content</FormLabel>
-                  <FormControl>
-                    <textarea
-                      {...field}
-                      className="w-full min-h-[300px] p-3 rounded-md border"
-                      placeholder="Write your thoughts..."
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="isPublic"
-              render={({ field }) => (
-                <FormItem className="flex items-center justify-between">
-                  <FormLabel>Make this entry public</FormLabel>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="sharedWithCircleId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Share with Circle</FormLabel>
-                  <Select
-                    onValueChange={(value) => field.onChange(value === "none" ? null : parseInt(value))}
-                    value={field.value?.toString() || "none"}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a circle to share with" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">Keep Private</SelectItem>
-                      {circles?.map((circle) => (
-                        <SelectItem key={circle.id} value={circle.id.toString()}>
-                          {circle.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={createJournalMutation.isPending}
-            >
-              {createJournalMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              Save Journal
-            </Button>
-          </CardContent>
-        </Card>
-
-        {aiInsights && (
-          <Card className="mt-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <Card>
             <CardHeader>
-              <CardTitle>AI Insights</CardTitle>
+              <CardTitle>{selectedJournalId ? "Edit Journal" : "New Journal Entry"}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium mb-2">Mood</h4>
-                  <p>{aiInsights.mood}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-2">Insights</h4>
-                  <ul className="list-disc pl-4">
-                    {aiInsights.insights.map((insight: string, i: number) => (
-                      <li key={i}>{insight}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-2">Suggestions</h4>
-                  <ul className="list-disc pl-4">
-                    {aiInsights.suggestions.map((suggestion: string, i: number) => (
-                      <li key={i}>{suggestion}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Give your entry a title..." />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="mood"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>How are you feeling?</FormLabel>
+                    <div className="flex gap-2">
+                      {moods.map(({ value, label, icon: Icon, color }) => (
+                        <Button
+                          key={value}
+                          type="button"
+                          variant={field.value === value ? "default" : "outline"}
+                          className="flex-1"
+                          style={{
+                            backgroundColor: field.value === value ? color : undefined,
+                            borderColor: color,
+                          }}
+                          onClick={() => {
+                            field.onChange(value);
+                            form.setValue("moodColor", color);
+                          }}
+                        >
+                          <Icon className="h-4 w-4 mr-2" />
+                          {label}
+                        </Button>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="content"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Content</FormLabel>
+                    <FormControl>
+                      <textarea
+                        {...field}
+                        className="w-full min-h-[300px] p-3 rounded-md border"
+                        placeholder="Write your thoughts..."
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isPublic"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between">
+                    <FormLabel>Make this entry public</FormLabel>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="sharedWithCircleId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Share with Circle</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(value === "none" ? null : parseInt(value))}
+                      value={field.value?.toString() || "none"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a circle to share with" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">Keep Private</SelectItem>
+                        {circles?.map((circle) => (
+                          <SelectItem key={circle.id} value={circle.id.toString()}>
+                            {circle.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={createJournalMutation.isPending}
+              >
+                {createJournalMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                Save Journal
+              </Button>
             </CardContent>
           </Card>
-        )}
-      </form>
-    </Form>
+        </form>
+      </Form>
+
+      <AIChat onAppendToJournal={handleAppendToJournal} />
+    </div>
   );
 }
