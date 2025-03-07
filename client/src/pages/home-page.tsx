@@ -3,19 +3,26 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import JournalEditor from "@/components/journal-editor";
 import JournalList from "@/components/journal-list";
+import JournalViewer from "@/components/journal-viewer";
 import Recommendations from "@/components/recommendations";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from "wouter";
 import { Book, Users } from "lucide-react";
+import { Journal } from "@shared/schema";
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
   const [selectedJournalId, setSelectedJournalId] = useState<number | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
-  const { data: journals = [] } = useQuery({
+  const { data: journals = [] } = useQuery<Journal[]>({
     queryKey: ["/api/journals"],
   });
+
+  const selectedJournal = selectedJournalId 
+    ? journals.find(j => j.id === selectedJournalId)
+    : null;
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -44,7 +51,10 @@ export default function HomePage() {
           <JournalList
             journals={journals}
             selectedId={selectedJournalId}
-            onSelect={setSelectedJournalId}
+            onSelect={(id) => {
+              setSelectedJournalId(id);
+              setIsEditing(id === null); // If creating new entry, go to edit mode
+            }}
           />
         </ScrollArea>
       </aside>
@@ -52,10 +62,24 @@ export default function HomePage() {
       <main className="flex-1 p-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
           <div className="lg:col-span-2">
-            <JournalEditor
-              selectedJournalId={selectedJournalId}
-              onJournalCreated={(id) => setSelectedJournalId(id)}
-            />
+            {isEditing ? (
+              <JournalEditor
+                selectedJournalId={selectedJournalId}
+                onJournalCreated={(id) => {
+                  setSelectedJournalId(id);
+                  setIsEditing(false);
+                }}
+              />
+            ) : selectedJournal ? (
+              <JournalViewer
+                journal={selectedJournal}
+                onEdit={() => setIsEditing(true)}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-[60vh] text-muted-foreground">
+                Select a journal entry or create a new one
+              </div>
+            )}
           </div>
           <div className="hidden lg:block">
             <Recommendations />
