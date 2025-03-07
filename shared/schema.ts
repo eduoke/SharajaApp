@@ -64,6 +64,7 @@ export const insertCircleMemberSchema = createInsertSchema(circleMembers).pick({
   role: true,
 }).extend({
   role: z.enum(['member', 'admin']).default('member'),
+  username: z.string(), // Add username field for lookup
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

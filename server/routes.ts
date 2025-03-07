@@ -129,8 +129,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!circle) return res.sendStatus(404);
     if (circle.ownerId !== req.user.id) return res.sendStatus(403);
 
-    const data = insertCircleMemberSchema.parse(req.body);
-    const member = await storage.addCircleMember(circleId, data);
+    const { username, role } = insertCircleMemberSchema.parse(req.body);
+
+    // Look up user by username
+    const userToAdd = await storage.getUserByUsername(username);
+    if (!userToAdd) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const member = await storage.addCircleMember(circleId, {
+      userId: userToAdd.id,
+      role,
+    });
+
     res.status(201).json(member);
   });
 
