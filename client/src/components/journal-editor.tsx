@@ -35,9 +35,10 @@ const moods = [
 interface JournalEditorProps {
   selectedJournalId: number | null;
   onJournalCreated: (id: number) => void;
+  circles: { id: number; name: string }[]; // Added circles prop
 }
 
-export default function JournalEditor({ selectedJournalId, onJournalCreated }: JournalEditorProps) {
+export default function JournalEditor({ selectedJournalId, onJournalCreated, circles }: JournalEditorProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [aiInsights, setAiInsights] = useState<any>(null);
@@ -49,8 +50,8 @@ export default function JournalEditor({ selectedJournalId, onJournalCreated }: J
       content: "",
       category: "Personal",
       isPublic: false,
-      mood: "neutral", //added default value
-      moodColor: "#808080" //added default value
+      mood: "neutral",
+      moodColor: "#808080"
     },
   });
 
@@ -68,8 +69,8 @@ export default function JournalEditor({ selectedJournalId, onJournalCreated }: J
         content: "",
         category: "Personal",
         isPublic: false,
-        mood: "neutral", //added default value
-        moodColor: "#808080" //added default value
+        mood: "neutral",
+        moodColor: "#808080"
       });
     }
   }, [selectedJournal, form]);
@@ -235,6 +236,35 @@ export default function JournalEditor({ selectedJournalId, onJournalCreated }: J
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="sharedWithCircleId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Share with Circle</FormLabel>
+                  <Select
+                    onValueChange={(value) => field.onChange(value ? parseInt(value) : null)}
+                    value={field.value?.toString() || ""}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a circle to share with" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Keep Private</SelectItem>
+                      {circles?.map((circle) => (
+                        <SelectItem key={circle.id} value={circle.id.toString()}>
+                          {circle.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

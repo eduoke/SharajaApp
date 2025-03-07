@@ -3,13 +3,19 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { getJournalInsights, getJournalRecommendations } from "./huggingface";
-import { insertJournalSchema, insertCircleSchema } from "@shared/schema";
+import { insertJournalSchema, insertCircleSchema, insertCircleMemberSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
   // Journal routes
   app.get("/api/journals", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const journals = await storage.getAccessibleJournals(req.user.id);
+    res.json(journals);
+  });
+
+  app.get("/api/journals/my", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const journals = await storage.getJournalsByUserId(req.user.id);
     res.json(journals);
@@ -18,6 +24,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/journals", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const data = insertJournalSchema.parse(req.body);
+
+    // If trying to share with a circle, verify circle exists and user is a member
+    if (data.sharedWithCircleId) {
+      const isMember = await storage.isCircleMember(req.user.id, data.sharedWithCircleId);
+      if (!isMember) {
+        return res.status(403).json({ message: "You are not a member of this circle" });
+      }
+    }
+
     const journal = await storage.createJournal({
       ...data,
       userId: req.user.id,
@@ -29,10 +44,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const journal = await storage.getJournal(parseInt(req.params.id));
     if (!journal) return res.sendStatus(404);
-    if (journal.userId !== req.user.id && !journal.isPublic) {
-      return res.sendStatus(403);
+
+    // Check if user has access to this journal
+    if (journal.userId === req.user.id) {
+      return res.json(journal); // User owns the journal
     }
-    res.json(journal);
+
+    if (journal.isPublic) {
+      return res.json(journal); // Journal is public
+    }
+
+    if (journal.sharedWithCircleId) {
+      const isMember = await storage.isCircleMember(req.user.id, journal.sharedWithCircleId);
+      if (isMember) {
+        return res.json(journal); // User is member of the circle the journal is shared with
+      }
+    }
+
+    return res.sendStatus(403);
+  });
+
+  app.patch("/api/journals/:id/share", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const journalId = parseInt(req.params.id);
+    const { circleId } = req.body;
+
+    const journal = await storage.getJournal(journalId);
+    if (!journal) return res.sendStatus(404);
+    if (journal.userId !== req.user.id) return res.sendStatus(403);
+
+    if (circleId) {
+      const isMember = await storage.isCircleMember(req.user.id, circleId);
+      if (!isMember) {
+        return res.status(403).json({ message: "You are not a member of this circle" });
+      }
+    }
+
+    const updatedJournal = await storage.updateJournalSharing(journalId, circleId);
+    res.json(updatedJournal);
   });
 
   // Circle routes
@@ -43,6 +92,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ...data,
       ownerId: req.user.id,
     });
+
+    // Add creator as admin member
+    await storage.addCircleMember(circle.id, {
+      userId: req.user.id,
+      role: 'admin',
+    });
+
     res.status(201).json(circle);
   });
 
@@ -50,6 +106,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const circles = await storage.getCirclesByUserId(req.user.id);
     res.json(circles);
+  });
+
+  app.get("/api/circles/:id/members", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const circleId = parseInt(req.params.id);
+
+    // Check if user is a member of the circle
+    const isMember = await storage.isCircleMember(req.user.id, circleId);
+    if (!isMember) return res.sendStatus(403);
+
+    const members = await storage.getCircleMembersByCircleId(circleId);
+    res.json(members);
+  });
+
+  app.post("/api/circles/:id/members", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const circleId = parseInt(req.params.id);
+    const circle = await storage.getCirclesByUserId(req.user.id)
+      .then(circles => circles.find(c => c.id === circleId));
+
+    if (!circle) return res.sendStatus(404);
+    if (circle.ownerId !== req.user.id) return res.sendStatus(403);
+
+    const data = insertCircleMemberSchema.parse(req.body);
+    const member = await storage.addCircleMember(circleId, data);
+    res.status(201).json(member);
+  });
+
+  app.delete("/api/circles/:circleId/members/:userId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const circleId = parseInt(req.params.circleId);
+    const circle = await storage.getCirclesByUserId(req.user.id)
+      .then(circles => circles.find(c => c.id === circleId));
+
+    if (!circle) return res.sendStatus(404);
+    if (circle.ownerId !== req.user.id) return res.sendStatus(403);
+
+    await storage.removeCircleMember(circleId, parseInt(req.params.userId));
+    res.sendStatus(204);
   });
 
   // AI routes
